@@ -1,0 +1,10 @@
+ofxBinaryCommunicator	KEYWORD1
+setup	KEYWORD2
+update	KEYWORD2
+sendPacket	KEYWORD2
+sendEndPacket	KEYWORD2
+onReceived	KEYWORD2
+onBinaryEnd	KEYWORD2
+onError	KEYWORD2
+ErrorType	KEYWORD3
+BinaryPacket	KEYWORD3
