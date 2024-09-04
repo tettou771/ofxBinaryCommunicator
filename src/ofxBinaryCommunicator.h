@@ -1,5 +1,10 @@
 #pragma once
 
+// You can overwrite this value
+#ifndef MAX_PACKET_SIZE
+#define MAX_PACKET_SIZE 256 // packet size max
+#endif
+
 #ifndef PacketHeader
 #define PacketHeader 0x99
 #endif
@@ -10,23 +15,20 @@
 
 #define PacketEnd 0x97
 
-#include <cstdint>
-#include <functional>
+#include <stdint.h>
+#include <string.h>
 
-#ifdef OF_VERSION_MAJOR
-#include "ofMain.h"
-#else
-#include <Arduino.h>
-#include <SoftwareSerial.h>
+#if !defined(OF_VERSION_MAJOR) && !defined(ARDUINO)
+    #include "ofMain.h"
 #endif
 
-template<typename T>
-union ofxBinaryPacket {
-    T data;
-    uint8_t bytes[1];
-};
+#ifndef OF_VERSION_MAJOR
+    #include <Arduino.h>
+    #ifdef USBCON
+        #include <SoftwareSerial.h>
+    #endif
+#endif
 
-template<typename T>
 class ofxBinaryCommunicator {
 public:
     enum class ErrorType {
@@ -40,43 +42,49 @@ public:
     ~ofxBinaryCommunicator();
 
     #ifdef OF_VERSION_MAJOR
-    void setup(const string& port, int baudRate) {
-        serial.setup(port, baudRate);
-        initialized = serial.isInitialized();
-    }
+    void setup(const string& port, int baudRate);
     #else
-    void setup(HardwareSerial& serialDevice, int baudRate) {
-        serial = &serialDevice;
-        serialDevice.begin(baudRate);
-        initialized = true;
-    }
-
-    void setup(SoftwareSerial& serialDevice, int baudRate) {
-        serial = &serialDevice;
-        serialDevice.begin(baudRate);
-        initialized = true;
-    }
-
-    void setup(Stream& serialDevice, int baudRate) {
-        serial = &serialDevice;
-        initialized = true;
-        // Stream クラスには begin メソッドがないので、何もしない
-    }
+    void setup(HardwareSerial& serialDevice, int baudRate);
+    void setup(Stream& serialDevice);
     #endif
 
     void update();
-    void sendPacket(const ofxBinaryPacket<T>& packet);
-    void sendPacket(const ofxBinaryPacket<T>& packet, size_t totalSize);
+    void sendPacket(uint16_t topicId, const uint8_t* data, size_t length);
     void sendEndPacket();
 
-    std::function<void(const ofxBinaryPacket<T>&, size_t)> onReceived;
-    std::function<void()> onBinaryEnd;
-    std::function<void(ErrorType, const uint8_t*, size_t)> onError;
+    typedef void (*ReceivedCallback)(void* userData, uint16_t topicId, const uint8_t* data, size_t length);
+    typedef void (*ErrorCallback)(void* userData, ErrorType errorType, const uint8_t* data, size_t length);
+    typedef void (*EndPacketCallback)(void* userData);
 
-    bool isInitialized() {
-        return initialized;
+    void setReceivedCallback(ReceivedCallback callback, void* userData) {
+        onReceived = callback;
+        receivedUserData = userData;
     }
-    
+    void setErrorCallback(ErrorCallback callback, void* userData) {
+        onError = callback;
+        errorUserData = userData;
+    }
+    void setEndPacketCallback(EndPacketCallback callback, void* userData) {
+        onEndPacket = callback;
+        endPacketUserData = userData;
+    }
+
+    bool isInitialized() const { return initialized; }
+
+    // Helper template function for sending typed data
+    template<typename T>
+    void sendPacket(uint16_t topicId, const T& data) {
+        sendPacket(topicId, reinterpret_cast<const uint8_t*>(&data), sizeof(T));
+    }
+
+    // Helper template function for parsing received data
+    template<typename T>
+    static bool parse(const uint8_t* data, size_t length, T& out) {
+        if (length != sizeof(T)) return false;
+        memcpy(&out, data, sizeof(T));
+        return true;
+    }
+
 private:
     bool packetReceived();
     void sendByte(uint8_t byte);
@@ -87,11 +95,12 @@ private:
     #else
     Stream* serial;
     #endif
-    bool initialized = false;
+    bool initialized;
 
     enum class ReceiveState {
         WaitingForHeader,
         ReceivingChecksum,
+        ReceivingTopicId,
         ReceivingLength,
         ReceivingData,
         ReceivingEscape
@@ -99,161 +108,15 @@ private:
 
     ReceiveState state;
     uint16_t receivedChecksum;
+    uint16_t topicId;
     uint16_t packetLength;
     uint16_t receivedLength;
-    static const size_t MAX_PACKET_SIZE = sizeof(T) + 100;
     uint8_t receivedData[MAX_PACKET_SIZE];
+
+    ReceivedCallback onReceived;
+    void* receivedUserData;
+    ErrorCallback onError;
+    void* errorUserData;
+    EndPacketCallback onEndPacket;
+    void* endPacketUserData;
 };
-
-// テンプレートの実装
-template<typename T>
-ofxBinaryCommunicator<T>::ofxBinaryCommunicator() : state(ReceiveState::WaitingForHeader), receivedChecksum(0), packetLength(0), receivedLength(0) {}
-
-template<typename T>
-ofxBinaryCommunicator<T>::~ofxBinaryCommunicator() {
-    #ifdef OF_VERSION_MAJOR
-    if (serial.isInitialized()) {
-        serial.close();
-    }
-    #endif
-}
-
-template<typename T>
-void ofxBinaryCommunicator<T>::update() {
-#ifdef OF_VERSION_MAJOR
-    while (serial.available()) {
-        uint8_t incomingByte = serial.readByte();
-#else
-    while (serial->available()) {
-        uint8_t incomingByte = serial->read();
-#endif
-            
-        switch (state) {
-            case ReceiveState::WaitingForHeader:
-                if (incomingByte == PacketHeader) {
-                    state = ReceiveState::ReceivingChecksum;
-                    receivedChecksum = 0;
-                    receivedLength = 0;
-                } else if (incomingByte == PacketEnd) {
-                    if (onBinaryEnd) onBinaryEnd();
-                } else {
-                    if (onError) onError(ErrorType::UnexpectedHeader, &incomingByte, 1);
-                }
-                break;
-                
-            case ReceiveState::ReceivingChecksum:
-                receivedChecksum = (receivedChecksum << 8) | incomingByte;
-                if (receivedLength == 1) {
-                    state = ReceiveState::ReceivingLength;
-                    packetLength = 0;
-                    receivedLength = 0;
-                } else {
-                    receivedLength++;
-                }
-                break;
-                
-            case ReceiveState::ReceivingLength:
-                packetLength = (packetLength << 8) | incomingByte;
-                if (receivedLength == 1) {
-                    state = ReceiveState::ReceivingData;
-                    receivedLength = 0;
-                    if (packetLength > MAX_PACKET_SIZE) {
-                        if (onError) onError(ErrorType::BufferOverflow, receivedData, receivedLength);
-                        state = ReceiveState::WaitingForHeader;
-                    }
-                } else {
-                    receivedLength++;
-                }
-                break;
-                
-            case ReceiveState::ReceivingData:
-                if (incomingByte == PacketEscape) {
-                    state = ReceiveState::ReceivingEscape;
-                } else {
-                    receivedData[receivedLength++] = incomingByte;
-                    if (receivedLength == packetLength) {
-                        packetReceived();
-                        state = ReceiveState::WaitingForHeader;
-                    } else if (receivedLength > packetLength) {
-                        if (onError) onError(ErrorType::BufferOverflow, receivedData, receivedLength);
-                        state = ReceiveState::WaitingForHeader;
-                    }
-                }
-                break;
-                
-            case ReceiveState::ReceivingEscape:
-                receivedData[receivedLength++] = incomingByte;
-                if (receivedLength == packetLength) {
-                    packetReceived();
-                    state = ReceiveState::WaitingForHeader;
-                } else if (receivedLength > packetLength) {
-                    if (onError) onError(ErrorType::BufferOverflow, receivedData, receivedLength);
-                    state = ReceiveState::WaitingForHeader;
-                } else {
-                    state = ReceiveState::ReceivingData;
-                }
-                break;
-        }
-    }
-};
-
-template<typename T>
-void ofxBinaryCommunicator<T>::sendPacket(const ofxBinaryPacket<T>& packet) {
-    sendPacket(packet, sizeof(T));
-}
-
-template<typename T>
-void ofxBinaryCommunicator<T>::sendPacket(const ofxBinaryPacket<T>& packet, size_t totalSize) {
-    sendByte(PacketHeader);
-
-    uint16_t checksum = calculateChecksum(packet.bytes, totalSize);
-    sendByte(checksum >> 8);
-    sendByte(checksum & 0xFF);
-
-    sendByte(totalSize >> 8);
-    sendByte(totalSize & 0xFF);
-
-    for (size_t i = 0; i < totalSize; ++i) {
-        if (packet.bytes[i] == PacketHeader || packet.bytes[i] == PacketEscape || packet.bytes[i] == PacketEnd) {
-            sendByte(PacketEscape);
-        }
-        sendByte(packet.bytes[i]);
-    }
-}
-
-template<typename T>
-void ofxBinaryCommunicator<T>::sendEndPacket() {
-    sendByte(PacketEnd);
-}
-
-template<typename T>
-bool ofxBinaryCommunicator<T>::packetReceived() {
-    uint16_t calculatedChecksum = calculateChecksum(receivedData, packetLength);
-    if (calculatedChecksum == receivedChecksum) {
-        ofxBinaryPacket<T> receivedPacket;
-        memcpy(&receivedPacket, receivedData, std::min(sizeof(T), (size_t)packetLength));
-        if (onReceived) onReceived(receivedPacket, packetLength);
-        return true;
-    } else {
-        if (onError) onError(ErrorType::ChecksumMismatch, receivedData, receivedLength);
-        return false;
-    }
-}
-
-template<typename T>
-void ofxBinaryCommunicator<T>::sendByte(uint8_t byte) {
-    #ifdef OF_VERSION_MAJOR
-    serial.writeByte(byte);
-    #else
-    serial->write(byte);
-    #endif
-}
-
-template<typename T>
-uint16_t ofxBinaryCommunicator<T>::calculateChecksum(const uint8_t* data, size_t length) {
-    uint16_t checksum = 0;
-    for (size_t i = 0; i < length; ++i) {
-        checksum += data[i];
-    }
-    return checksum;
-}
