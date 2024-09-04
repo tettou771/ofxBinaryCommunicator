@@ -21,12 +21,12 @@ struct SampleSensorData {
 
 ofxBinaryCommunicator communicator;
 
-void onMessageReceived(uint16_t topicId, const uint8_t* data, size_t length) {
+void onMessageReceived(const ofxBinaryPacket& packet) {
     // Echo back all received data
-    communicator.sendPacket(topicId, data, length);
+    communicator.sendBinaryPacket(packet);
 }
 
-void onError(ofxBinaryCommunicator::ErrorType errorType, const uint8_t* data, size_t length) {
+void onError(ofxBinaryCommunicator::ErrorType errorType) {
     // Flash LED to indicate error
     for (int i = 0; i < 5; i++) {
         digitalWrite(ERROR_LED_PIN, HIGH);
@@ -36,7 +36,7 @@ void onError(ofxBinaryCommunicator::ErrorType errorType, const uint8_t* data, si
     }
 }
 
-void onEndPacket(void* userData) {
+void onEndPacket() {
     // Do nothing for end packet
 }
 
@@ -45,9 +45,9 @@ void setup() {
     
     communicator.setup(Serial);
 
-    communicator.setReceivedCallback(onMessageReceived, nullptr);
-    communicator.setErrorCallback(onError, nullptr);
-    communicator.setEndPacketCallback(onEndPacket, nullptr);
+    communicator.setReceivedCallback(onMessageReceived);
+    communicator.setErrorCallback(onError);
+    communicator.setEndPacketCallback(onEndPacket);
 }
 
 void loop() {

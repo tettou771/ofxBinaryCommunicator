@@ -82,12 +82,12 @@ public:
     bool isInitialized() const { return initialized; }
 
     void sendEndPacket();
-    void sendPacket(const ofxBinaryPacket& packet);
+    void sendBinaryPacket(const ofxBinaryPacket& packet);
 
     // Helper template function for sending typed data
     template<typename T>
     void sendPacket(uint16_t topicId, const T& data) {
-        sendPacket(ofxBinaryPacket(topicId, sizeof(T), reinterpret_cast<const uint8_t*>(&data)));
+        sendBinaryPacket(ofxBinaryPacket(topicId, sizeof(T), reinterpret_cast<const uint8_t*>(&data)));
     }
 
     // Helper template function for parsing received data
