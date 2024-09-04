@@ -6,16 +6,18 @@ ofxBinaryCommunicator::ofxBinaryCommunicator()
 
 ofxBinaryCommunicator::~ofxBinaryCommunicator() {
     #ifdef OF_VERSION_MAJOR
-    if (serial.isInitialized()) {
-        serial.close();
+    if (serial->isInitialized()) {
+        serial->close();
+        delete serial;
     }
     #endif
 }
 
 #ifdef OF_VERSION_MAJOR
 void ofxBinaryCommunicator::setup(const string& port, int baudRate) {
-    serial.setup(port, baudRate);
-    initialized = serial.isInitialized();
+    if (!serial) serial = new ofSerial;
+    serial->setup(port, baudRate);
+    initialized = serial->isInitialized();
 }
 #else
 void ofxBinaryCommunicator::setup(HardwareSerial& serialDevice, int baudRate) {
@@ -31,10 +33,10 @@ void ofxBinaryCommunicator::setup(Stream& serialDevice) {
 #endif
 
 void ofxBinaryCommunicator::update() {
-    while (initialized && serial.available()) {
+    while (initialized && serial->available()) {
         int incomingByte;
         #ifdef OF_VERSION_MAJOR
-        incomingByte = serial.readByte();
+        incomingByte = serial->readByte();
         if (incomingByte == OF_SERIAL_NO_DATA) break;
         #else
         incomingByte = serial->read();
@@ -176,7 +178,7 @@ bool ofxBinaryCommunicator::packetReceived() {
 
 void ofxBinaryCommunicator::sendByte(uint8_t byte) {
     #ifdef OF_VERSION_MAJOR
-    serial.writeByte(byte);
+    serial->writeByte(byte);
     #else
     serial->write(byte);
     #endif

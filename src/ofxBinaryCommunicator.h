@@ -91,7 +91,7 @@ private:
     uint16_t calculateChecksum(const uint8_t* data, size_t length);
 
     #ifdef OF_VERSION_MAJOR
-    ofSerial serial;
+    ofSerial* serial;
     #else
     Stream* serial;
     #endif
