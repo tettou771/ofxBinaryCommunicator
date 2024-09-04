@@ -73,8 +73,26 @@ void ofApp::onMessageReceived(uint16_t topicId, const uint8_t* data, size_t leng
                 ofLogNotice() << "Timestamp: " << sensorData.timestamp;
                 ofLogNotice() << "Sensor value: " << sensorData.sensorValue;
             }
-            break;
-        }
-        // Handle other topicIds if needed
+        } break;
+        
+        case 1: { // SampleMouseData (echo back)
+            SampleMouseData mouseData;
+            if (ofxBinaryCommunicator::parse(data, length, mouseData)) {
+                ofLogNotice() << "Received mouse data (echo back)";
+                ofLogNotice() << "Timestamp: " << mouseData.timestamp;
+                ofLogNotice() << "X: " << mouseData.x;
+                ofLogNotice() << "Y: " << mouseData.y;
+                ofLogNotice() << "Message: " << mouseData.message;
+            }
+        } break;
+
+        case 2: { // SampleKeyData (echo back)
+            SampleKeyData keyData;
+            if (ofxBinaryCommunicator::parse(data, length, keyData)) {
+                ofLogNotice() << "Received key data (echo back)";
+                ofLogNotice() << "Timestamp: " << keyData.timestamp;
+                ofLogNotice() << "Key: " << keyData.key;
+            }
+        } break;
     }
 }

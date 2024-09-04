@@ -1,5 +1,7 @@
 #include <ofxBinaryCommunicator.h>
 
+#define ERROR_LED_PIN 13 // Arduinoのビルトインバイナリが分かる場合に変更してください
+
 struct SampleMouseData {
     int32_t timestamp;
     int x;
@@ -20,43 +22,27 @@ struct SampleSensorData {
 ofxBinaryCommunicator communicator;
 
 void onMessageReceived(void* userData, uint16_t topicId, const uint8_t* data, size_t length) {
-    // Echo back the received data
+    // Echo back all received data
     communicator.sendPacket(topicId, data, length);
-
-    // You can also parse and use the data if needed
-    switch (topicId) {
-        case 1: { // SampleMouseData
-            SampleMouseData mouseData;
-            if (ofxBinaryCommunicator::parse(data, length, mouseData)) {
-                Serial.print("Received mouse data - X: ");
-                Serial.print(mouseData.x);
-                Serial.print(", Y: ");
-                Serial.println(mouseData.y);
-            }
-            break;
-        }
-        case 2: { // SampleKeyData
-            SampleKeyData keyData;
-            if (ofxBinaryCommunicator::parse(data, length, keyData)) {
-                Serial.print("Received key press: ");
-                Serial.println(keyData.key);
-            }
-            break;
-        }
-    }
 }
 
 void onError(void* userData, ofxBinaryCommunicator::ErrorType errorType, const uint8_t* data, size_t length) {
-    Serial.print("Error occurred: ");
-    Serial.println(static_cast<int>(errorType));
+    // Flash LED to indicate error
+    for (int i = 0; i < 5; i++) {
+        digitalWrite(ERROR_LED_PIN, HIGH);
+        delay(100);
+        digitalWrite(ERROR_LED_PIN, LOW);
+        delay(100);
+    }
 }
 
 void onEndPacket(void* userData) {
-    Serial.println("End packet received");
+    // Do nothing for end packet
 }
 
 void setup() {
-    Serial.begin(115200);
+    pinMode(ERROR_LED_PIN, OUTPUT);
+    
     communicator.setup(Serial);
 
     communicator.setReceivedCallback(onMessageReceived, nullptr);
@@ -73,11 +59,7 @@ void loop() {
         SampleSensorData sensorData;
         sensorData.timestamp = millis();
         sensorData.sensorValue = analogRead(A0);
-        uint16_t topicId = 0; // sensor data topic
-        communicator.sendPacket<SampleSensorData>(topicId, sensorData);
+        communicator.sendPacket<SampleSensorData>(0, sensorData);
         lastSensorSend = millis();
-
-        Serial.print("Sent sensor data: ");
-        Serial.println(sensorData.sensorValue);
     }
 }

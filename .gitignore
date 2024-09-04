@@ -1,6 +1,6 @@
-example*/*
-!example*/src
-!example*/addons.make
+example-openFrameworks/*
+!example-openFrameworks/src
+!example-openFrameworks/addons.make
 
 # osx
 .DS_Store
