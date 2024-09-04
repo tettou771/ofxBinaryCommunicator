@@ -29,11 +29,13 @@ public:
     void mouseMoved(int x, int y);
     void keyPressed(int key);
 
-    void onMessageReceived(uint16_t topicId, const uint8_t* data, size_t length);
-
-    static void staticOnMessageReceived(void* userData, uint16_t topicId, const uint8_t* data, size_t length);
-    static void staticOnError(void* userData, ofxBinaryCommunicator::ErrorType errorType, const uint8_t* data, size_t length);
+    // Callback methods for ofxBinaryCommunicator
+    void onMessageReceived(const ofxBinaryPacket& packet);
+    void onError(ofxBinaryCommunicator::ErrorType& errorType);
+    void onEndPacket();
 
 private:
     ofxBinaryCommunicator communicator;
+    std::vector<SampleSensorData> receivedSensorData;
+    std::string lastError;
 };

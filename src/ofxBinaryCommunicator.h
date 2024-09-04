@@ -29,8 +29,19 @@
     #endif
 #endif
 
+// Packet data struct
+struct ofxBinaryPacket {
+    uint16_t topicId;
+    size_t length;
+    const uint8_t* data;
+
+    ofxBinaryPacket(uint16_t _topicId, size_t _length, const uint8_t* _data)
+        : topicId(_topicId), length(_length), data(_data) {}
+};
+
 class ofxBinaryCommunicator {
 public:
+    // Error types that can occur during communication
     enum class ErrorType {
         ChecksumMismatch,
         IncompletePacket,
@@ -41,6 +52,7 @@ public:
     ofxBinaryCommunicator();
     ~ofxBinaryCommunicator();
 
+    // Setup method to initialize the communicator
     #ifdef OF_VERSION_MAJOR
     void setup(const string& port, int baudRate);
     #else
@@ -49,52 +61,67 @@ public:
     #endif
 
     void update();
-    void sendPacket(uint16_t topicId, const uint8_t* data, size_t length);
-    void sendEndPacket();
 
-    typedef void (*ReceivedCallback)(void* userData, uint16_t topicId, const uint8_t* data, size_t length);
-    typedef void (*ErrorCallback)(void* userData, ErrorType errorType, const uint8_t* data, size_t length);
-    typedef void (*EndPacketCallback)(void* userData);
+#ifdef OF_VERSION_MAJOR
+    // callback for openFrameworks
+    ofEvent<const ofxBinaryPacket> onReceived;
+    ofEvent<ErrorType> onError;
+    ofEvent<void> onEndPacket;
+#else
+    // callback for Arduino
+    typedef void (*ReceivedCallback)(const ofxBinaryPacket& packet);
+    typedef void (*ErrorCallback)(ErrorType errorType);
+    typedef void (*EndPacketCallback)();
 
-    void setReceivedCallback(ReceivedCallback callback, void* userData) {
-        onReceived = callback;
-        receivedUserData = userData;
-    }
-    void setErrorCallback(ErrorCallback callback, void* userData) {
-        onError = callback;
-        errorUserData = userData;
-    }
-    void setEndPacketCallback(EndPacketCallback callback, void* userData) {
-        onEndPacket = callback;
-        endPacketUserData = userData;
-    }
-
+    // Arduino specific methods to set callbacks
+    void setReceivedCallback(ReceivedCallback callback) { onReceived = callback; }
+    void setErrorCallback(ErrorCallback callback) { onError = callback; }
+    void setEndPacketCallback(EndPacketCallback callback) { onEndPacket = callback; }
+#endif
+    
     bool isInitialized() const { return initialized; }
+
+    void sendEndPacket();
+    void sendPacket(const ofxBinaryPacket& packet);
 
     // Helper template function for sending typed data
     template<typename T>
     void sendPacket(uint16_t topicId, const T& data) {
-        sendPacket(topicId, reinterpret_cast<const uint8_t*>(&data), sizeof(T));
+        sendPacket(ofxBinaryPacket(topicId, sizeof(T), reinterpret_cast<const uint8_t*>(&data)));
     }
 
     // Helper template function for parsing received data
     template<typename T>
-    static bool parse(const uint8_t* data, size_t length, T& out) {
-        if (length != sizeof(T)) return false;
-        memcpy(&out, data, sizeof(T));
+    static bool parse(const ofxBinaryPacket packet, T& out) {
+        if (packet.length != sizeof(T)) return false;
+        memcpy(&out, packet.data, sizeof(T));
         return true;
     }
 
 private:
+
+    #ifdef OF_VERSION_MAJOR
+    ofSerial* serial = nullptr;
+    #else
+    Stream* serial;
+
+    // Arduino specific callback function pointers
+    ReceivedCallback onReceived;
+    ErrorCallback onError;
+    EndPacketCallback onEndPacket;
+    #endif
+    
+    // Private methods to handle different aspects of communication
+    void processIncomingByte(uint8_t incomingByte);
     bool packetReceived();
     void sendByte(uint8_t byte);
     uint16_t calculateChecksum(const uint8_t* data, size_t length);
 
-    #ifdef OF_VERSION_MAJOR
-    ofSerial* serial;
-    #else
-    Stream* serial;
-    #endif
+    // Methods to notify callbacks/events (implementation differs between platforms)
+    void notifyReceived(const ofxBinaryPacket& packet);
+    void notifyError(ErrorType errorType);
+    void notifyEndPacket();
+    
     bool initialized;
 
     enum class ReceiveState {
@@ -112,11 +139,4 @@ private:
     uint16_t packetLength;
     uint16_t receivedLength;
     uint8_t receivedData[MAX_PACKET_SIZE];
-
-    ReceivedCallback onReceived;
-    void* receivedUserData;
-    ErrorCallback onError;
-    void* errorUserData;
-    EndPacketCallback onEndPacket;
-    void* endPacketUserData;
 };

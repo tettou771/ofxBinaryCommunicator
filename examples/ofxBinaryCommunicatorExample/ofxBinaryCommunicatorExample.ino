@@ -21,12 +21,12 @@ struct SampleSensorData {
 
 ofxBinaryCommunicator communicator;
 
-void onMessageReceived(void* userData, uint16_t topicId, const uint8_t* data, size_t length) {
+void onMessageReceived(uint16_t topicId, const uint8_t* data, size_t length) {
     // Echo back all received data
     communicator.sendPacket(topicId, data, length);
 }
 
-void onError(void* userData, ofxBinaryCommunicator::ErrorType errorType, const uint8_t* data, size_t length) {
+void onError(ofxBinaryCommunicator::ErrorType errorType, const uint8_t* data, size_t length) {
     // Flash LED to indicate error
     for (int i = 0; i < 5; i++) {
         digitalWrite(ERROR_LED_PIN, HIGH);
