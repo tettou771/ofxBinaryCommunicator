@@ -34,9 +34,23 @@ struct ofxBinaryPacket {
     uint16_t topicId;
     size_t length;
     const uint8_t* data;
-
+    
     ofxBinaryPacket(uint16_t _topicId, size_t _length, const uint8_t* _data)
-        : topicId(_topicId), length(_length), data(_data) {}
+    : topicId(_topicId), length(_length), data(_data) {}
+    
+    // Helper template function for convert typed data
+    template<typename T>
+    ofxBinaryPacket(const T& data, decltype(T::topicId)* = 0) 
+    : topicId(T::topicId), length(sizeof(T)), data(reinterpret_cast<const uint8_t*>(&data)) {}
+
+    // Helper template function for deserialize received data
+    template<typename T>
+    bool unpack(T& out, decltype(T::topicId)* = 0) const {
+        if (T::topicId != topicId) return false;
+        if (length != sizeof(T)) return false;
+        memcpy(&out, data, sizeof(T));
+        return true;
+    }
 };
 
 class ofxBinaryCommunicator {
@@ -82,20 +96,11 @@ public:
     bool isInitialized() const { return initialized; }
 
     void sendEndPacket();
-    void sendBinaryPacket(const ofxBinaryPacket& packet);
-
-    // Helper template function for sending typed data
+    void sendPacket(const ofxBinaryPacket& packet);
     template<typename T>
-    void sendPacket(uint16_t topicId, const T& data) {
-        sendBinaryPacket(ofxBinaryPacket(topicId, sizeof(T), reinterpret_cast<const uint8_t*>(&data)));
-    }
-
-    // Helper template function for parsing received data
-    template<typename T>
-    static bool parse(const ofxBinaryPacket packet, T& out) {
-        if (packet.length != sizeof(T)) return false;
-        memcpy(&out, packet.data, sizeof(T));
-        return true;
+    void send(const T& data, decltype(T::topicId)* = 0) {
+        ofxBinaryPacket packet(data);
+        sendPacket(packet);
     }
 
 private:

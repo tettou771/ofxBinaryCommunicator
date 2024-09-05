@@ -50,7 +50,7 @@ void ofxBinaryCommunicator::sendEndPacket() {
     sendByte(PacketEnd);
 }
 
-void ofxBinaryCommunicator::sendBinaryPacket(const ofxBinaryPacket& packet) {
+void ofxBinaryCommunicator::sendPacket(const ofxBinaryPacket& packet) {
     sendByte(PacketHeader);
 
     uint16_t checksum = calculateChecksum(packet.data, packet.length);

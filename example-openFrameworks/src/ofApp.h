@@ -3,21 +3,28 @@
 #include "ofMain.h"
 #include "ofxBinaryCommunicator.h"
 
+struct SampleSensorData {
+    static const uint16_t topicId = 0; // Should not conflict to other
+    int32_t timestamp;
+    int sensorValue;
+};
+
 struct SampleMouseData {
+    static const uint16_t topicId = 1;
     int32_t timestamp;
     int x;
     int y;
-    char message[30];
 };
 
 struct SampleKeyData {
+    static const uint16_t topicId = 2;
     int32_t timestamp;
     char key;
 };
 
-struct SampleSensorData {
-    int32_t timestamp;
-    int sensorValue;
+struct SampleMessageData {
+    static const uint16_t topicId = 3;
+    char message[30];
 };
 
 class ofApp : public ofBaseApp {

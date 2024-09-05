@@ -7,7 +7,6 @@ void ofApp::setup() {
     ofAddListener(communicator.onReceived, this, &ofApp::onMessageReceived);
     ofAddListener(communicator.onError, this, &ofApp::onError);
     ofAddListener(communicator.onEndPacket, this, &ofApp::onEndPacket);
-
 }
 
 void ofApp::update() {
@@ -41,10 +40,8 @@ void ofApp::mouseMoved(int x, int y) {
     data.timestamp = ofGetElapsedTimeMillis();
     data.x = x;
     data.y = y;
-    strncpy(data.message, "mouseMoved", sizeof(data.message) - 1);
-    data.message[sizeof(data.message) - 1] = '\0';
     
-    communicator.sendPacket<SampleMouseData>(1, data);
+    communicator.send(data);
     
     ofLogNotice() << "Sent mouse data - X: " << data.x << ", Y: " << data.y;
 }
@@ -54,16 +51,16 @@ void ofApp::keyPressed(int key) {
     data.timestamp = ofGetElapsedTimeMillis();
     data.key = static_cast<char>(key);
     
-    communicator.sendPacket<SampleKeyData>(2, data);
+    communicator.send(data);
     
     ofLogNotice() << "Sent key data - Key: " << data.key;
 }
 
 void ofApp::onMessageReceived(const ofxBinaryPacket& packet) {
     switch (packet.topicId) {
-        case 0: { // SampleSensorData
+        case SampleSensorData::topicId: {
             SampleSensorData sensorData;
-            if (ofxBinaryCommunicator::parse(packet, sensorData)) {
+            if (packet.unpack(sensorData)) {
                 receivedSensorData.push_back(sensorData);
                 if (receivedSensorData.size() > 100) {
                     receivedSensorData.erase(receivedSensorData.begin());
@@ -73,25 +70,31 @@ void ofApp::onMessageReceived(const ofxBinaryPacket& packet) {
             break;
         }
 
-        case 1: { // SampleMouseData (echo back)
+        case SampleMouseData::topicId: { // SampleMouseData (echo back)
             SampleMouseData mouseData;
-            if (ofxBinaryCommunicator::parse(packet, mouseData)) {
+            if (packet.unpack(mouseData)) {
                 ofLogNotice() << "Received mouse data (echo back)";
-                ofLogNotice() << "Timestamp: " << mouseData.timestamp;
-                ofLogNotice() << "X: " << mouseData.x;
-                ofLogNotice() << "Y: " << mouseData.y;
-                ofLogNotice() << "Message: " << mouseData.message;
+                ofLogNotice() << "  Timestamp: " << mouseData.timestamp;
+                ofLogNotice() << "  XY: " << mouseData.x << " " << mouseData.y;
             }
         } break;
 
-        case 2: { // SampleKeyData (echo back)
+        case SampleKeyData::topicId: { // SampleKeyData (echo back)
             SampleKeyData keyData;
-            if (ofxBinaryCommunicator::parse(packet, keyData)) {
+            if (packet.unpack(keyData)) {
                 ofLogNotice() << "Received key data (echo back)";
-                ofLogNotice() << "Timestamp: " << keyData.timestamp;
-                ofLogNotice() << "Key: " << keyData.key;
+                ofLogNotice() << "  Timestamp: " << keyData.timestamp;
+                ofLogNotice() << "  Key: " << keyData.key;
             }
         } break;
+            
+        case SampleMessageData::topicId: {
+            SampleMessageData msgData;
+            if (packet.unpack(msgData)) {
+                ofLogNotice() << "Received Message Data";
+                ofLogNotice() << "  Message: " << msgData.message;
+            }
+        }
 
         default:
             ofLogNotice() << "Received unknown topic: " << packet.topicId;
