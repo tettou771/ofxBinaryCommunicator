@@ -22,10 +22,12 @@ void ofxBinaryCommunicator::setup(const std::string& portName, int baudRate) {
         serial = new ofSerial();
     }
     serial->setup(portName, baudRate);
+    initialized = serial->isInitialized();
 }
 #else
 void ofxBinaryCommunicator::setup(Stream& serialStream) {
     serial = &serialStream;
+    initialized = true;
 }
 #endif
 
