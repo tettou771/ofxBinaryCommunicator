@@ -1,19 +1,21 @@
 # ofxBinaryCommunicator
 
-ofxBinaryCommunicator is a library for easily sending and receiving custom-defined struct data between Arduino and openFrameworks. It uses serial communication to efficiently exchange binary data.
+ofxBinaryCommunicator is a library for efficient binary communication between Arduino and openFrameworks. It allows sending and receiving custom-defined struct data over serial communication with data integrity verification.
 
 ## Features
 
 - Send and receive custom-defined structs directly
-- Data integrity verification using checksums
+- Data integrity verification using Fletcher's Checksum
 - Error handling capabilities
 - Compatible with both Arduino and openFrameworks
+- Support for multiple data types with topic IDs
+- Escape sequence handling for reliable data transmission
 
 ## Installation
 
 ### openFrameworks
 
-1. Clone or download this repository and place it in the `openFrameworks/addons/` folder.
+1. Clone this repository into the `openFrameworks/addons/` folder.
 2. Use the openFrameworks project generator to add ofxBinaryCommunicator to your project.
 
 ### Arduino
@@ -23,21 +25,27 @@ ofxBinaryCommunicator is a library for easily sending and receiving custom-defin
 
 ## Usage
 
-1. Define the struct for the data you want to send and receive:
+1. Define structs for the data you want to send and receive:
 
 ```cpp
-struct SampleData {
+struct SampleSensorData {
+    static const uint8_t topicId = 0;
+    int32_t timestamp;
+    int sensorValue;
+};
+
+struct SampleMouseData {
+    static const uint8_t topicId = 1;
     int32_t timestamp;
     int x;
     int y;
-    char message[20];
 };
 ```
 
 2. Create an instance of ofxBinaryCommunicator:
 
 ```cpp
-ofxBinaryCommunicator<SampleData> communicator;
+ofxBinaryCommunicator communicator;
 ```
 
 3. Set up the communicator:
@@ -47,81 +55,92 @@ ofxBinaryCommunicator<SampleData> communicator;
 communicator.setup("/dev/ttyUSB0", 115200);
 
 // Arduino
-communicator.setup(Serial, 115200);
+communicator.setup(Serial);
 ```
 
 4. Send data:
 
 ```cpp
-SampleData data;
+SampleSensorData data;
 data.timestamp = ofGetElapsedTimeMillis(); // or millis()
-data.x = 100;
-data.y = 200;
-strncpy(data.message, "Hello", sizeof(data.message));
-
-ofxBinaryPacket<SampleData> packet;
-packet.packet = data;
-communicator.sendPacket(packet);
+data.sensorValue = analogRead(A0);
+communicator.send(data);
 ```
 
 5. Receive data:
 
 ```cpp
-communicator.onReceived = [](const ofxBinaryPacket<SampleData>& packet, size_t size) {
-    // Process received data
-};
+// openFrameworks
+ofAddListener(communicator.onReceived, this, &YourClass::onMessageReceived);
+
+void YourClass::onMessageReceived(const ofxBinaryPacket& packet) {
+    switch (packet.topicId) {
+        case SampleSensorData::topicId: {
+            SampleSensorData sensorData;
+            if (packet.unpack(sensorData)) {
+                // Process received data
+            }
+            break;
+        }
+        // Handle other topic IDs...
+    }
+}
+
+// Arduino
+communicator.setReceivedCallback(onMessageReceived);
+
+void onMessageReceived(const ofxBinaryPacket& packet) {
+    switch (packet.topicId) {
+        case SampleMouseData::topicId: {
+            SampleMouseData mouseData;
+            if (packet.unpack(mouseData)) {
+                // Process received data
+            }
+            break;
+        }
+        // Handle other topic IDs...
+    }
+}
 ```
 
 6. Set up error handling:
 
 ```cpp
-communicator.onError = [](ofxBinaryCommunicator<SampleData>::ErrorType errorType, const uint8_t* data, size_t length) {
+// openFrameworks
+ofAddListener(communicator.onError, this, &YourClass::onError);
+
+void YourClass::onError(ofxBinaryCommunicator::ErrorType& errorType) {
     // Handle errors
-};
+}
+
+// Arduino
+communicator.setErrorCallback(onError);
+
+void onError(ofxBinaryCommunicator::ErrorType errorType) {
+    // Handle errors
+}
 ```
 
 7. Call `update()` regularly to process data:
 
 ```cpp
-void loop() { // or void update()
+void update() { // or void loop() for Arduino
     communicator.update();
 }
 ```
 
-## Handling Variable-Length Data
+## Example
 
-To include variable-length data in your struct, you can implement it as follows:
+The repository includes example code for both Arduino (`ofxBinaryCommunicatorExample.ino`) and openFrameworks (`ofApp.cpp`). These examples demonstrate how to set up the communicator, send various types of data, and handle received messages.
 
-1. Define a variable-length array at the end of your struct:
+## Customization
 
-```cpp
-struct VariableLengthData {
-    int32_t timestamp;
-    int dataSize;
-    uint8_t data[];
-};
-```
-
-2. When sending, specify the actual data size when calling sendPacket:
+You can adjust the maximum packet size by defining `MAX_PACKET_SIZE` before including the library:
 
 ```cpp
-size_t totalSize = sizeof(VariableLengthData) + actualDataSize;
-VariableLengthData* vdata = (VariableLengthData*)malloc(totalSize);
-// Set up your data
-communicator.sendPacket(reinterpret_cast<ofxBinaryPacket<VariableLengthData>&>(*vdata), totalSize);
-free(vdata);
+#define MAX_PACKET_SIZE 512
+#include "ofxBinaryCommunicator.h"
 ```
-
-3. When receiving, use the received size to process the data appropriately:
-
-```cpp
-communicator.onReceived = [](const ofxBinaryPacket<VariableLengthData>& packet, size_t size) {
-    size_t dataSize = size - sizeof(VariableLengthData);
-    // Process the data
-};
-```
-
-Note: When using variable-length data, make sure to implement proper error checking to prevent buffer overflows.
 
 ## License
 
@@ -133,4 +152,4 @@ tettou771
 
 ## Contributing
 
-Bug reports and feature requests are welcome on GitHub Issues. Pull requests are also welcome.
+Bug reports, feature requests, and pull requests are welcome on GitHub Issues.
