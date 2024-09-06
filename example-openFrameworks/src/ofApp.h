@@ -39,7 +39,6 @@ public:
     // Callback methods for ofxBinaryCommunicator
     void onMessageReceived(const ofxBinaryPacket& packet);
     void onError(ofxBinaryCommunicator::ErrorType& errorType);
-    void onEndPacket();
 
 private:
     ofxBinaryCommunicator communicator;
