@@ -2,11 +2,10 @@
 
 void ofApp::setup() {
     ofSetFrameRate(60);
-    communicator.setup("/dev/cu.usbmodem2101", 115200);  // Adjust port name as needed
+    communicator.setup("/dev/cu.usbmodem101", 115200);  // Adjust port name as needed
 
     ofAddListener(communicator.onReceived, this, &ofApp::onMessageReceived);
     ofAddListener(communicator.onError, this, &ofApp::onError);
-    ofAddListener(communicator.onEndPacket, this, &ofApp::onEndPacket);
 }
 
 void ofApp::update() {
@@ -121,8 +120,4 @@ void ofApp::onError(ofxBinaryCommunicator::ErrorType& errorType) {
             break;
     }
     ofLogError() << "Error occurred: " << lastError;
-}
-
-void ofApp::onEndPacket() {
-    ofLogNotice() << "End packet received";
 }

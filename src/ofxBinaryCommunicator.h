@@ -13,8 +13,6 @@
 #define PacketEscape 0x98
 #endif
 
-#define PacketEnd 0x97
-
 #include <stdint.h>
 #include <string.h>
 
@@ -31,11 +29,11 @@
 
 // Packet data struct
 struct ofxBinaryPacket {
-    uint16_t topicId;
-    size_t length;
+    uint8_t topicId;
+    uint16_t length;
     const uint8_t* data;
     
-    ofxBinaryPacket(uint16_t _topicId, size_t _length, const uint8_t* _data)
+    ofxBinaryPacket(uint8_t _topicId, uint16_t _length, const uint8_t* _data)
     : topicId(_topicId), length(_length), data(_data) {}
     
     // Helper template function for convert typed data
@@ -80,22 +78,18 @@ public:
     // callback for openFrameworks
     ofEvent<const ofxBinaryPacket> onReceived;
     ofEvent<ErrorType> onError;
-    ofEvent<void> onEndPacket;
 #else
     // callback for Arduino
     typedef void (*ReceivedCallback)(const ofxBinaryPacket& packet);
     typedef void (*ErrorCallback)(ErrorType errorType);
-    typedef void (*EndPacketCallback)();
 
     // Arduino specific methods to set callbacks
     void setReceivedCallback(ReceivedCallback callback) { onReceived = callback; }
     void setErrorCallback(ErrorCallback callback) { onError = callback; }
-    void setEndPacketCallback(EndPacketCallback callback) { onEndPacket = callback; }
 #endif
     
     bool isInitialized() const { return initialized; }
 
-    void sendEndPacket();
     void sendPacket(const ofxBinaryPacket& packet);
     template<typename T>
     void send(const T& data, decltype(T::topicId)* = 0) {
@@ -113,19 +107,17 @@ private:
     // Arduino specific callback function pointers
     ReceivedCallback onReceived;
     ErrorCallback onError;
-    EndPacketCallback onEndPacket;
     #endif
     
     // Private methods to handle different aspects of communication
     void processIncomingByte(uint8_t incomingByte);
     bool packetReceived();
     void sendByte(uint8_t byte);
-    uint16_t calculateChecksum(const uint8_t* data, size_t length);
+    uint8_t calculateChecksum(const uint8_t* data, uint16_t length);
 
     // Methods to notify callbacks/events (implementation differs between platforms)
     void notifyReceived(const ofxBinaryPacket& packet);
     void notifyError(ErrorType errorType);
-    void notifyEndPacket();
     
     bool initialized;
 
@@ -139,8 +131,8 @@ private:
     };
 
     ReceiveState state;
-    uint16_t receivedChecksum;
-    uint16_t topicId;
+    uint8_t receivedChecksum;
+    uint8_t topicId;
     uint16_t packetLength;
     uint16_t receivedLength;
     uint8_t receivedData[MAX_PACKET_SIZE];

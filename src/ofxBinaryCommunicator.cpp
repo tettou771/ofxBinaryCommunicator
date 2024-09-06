@@ -46,25 +46,19 @@ void ofxBinaryCommunicator::update() {
     #endif
 }
 
-void ofxBinaryCommunicator::sendEndPacket() {
-    sendByte(PacketEnd);
-}
-
 void ofxBinaryCommunicator::sendPacket(const ofxBinaryPacket& packet) {
     sendByte(PacketHeader);
 
-    uint16_t checksum = calculateChecksum(packet.data, packet.length);
-    sendByte(checksum >> 8);
-    sendByte(checksum & 0xFF);
+    uint8_t checksum = calculateChecksum(packet.data, packet.length);
+    sendByte(checksum);
+    sendByte(packet.topicId);
 
-    sendByte(packet.topicId >> 8);
-    sendByte(packet.topicId & 0xFF);
-
+    // 2 bytes
     sendByte(packet.length >> 8);
     sendByte(packet.length & 0xFF);
 
-    for (size_t i = 0; i < packet.length; ++i) {
-        if (packet.data[i] == PacketHeader || packet.data[i] == PacketEscape || packet.data[i] == PacketEnd) {
+    for (uint16_t i = 0; i < packet.length; ++i) {
+        if (packet.data[i] == PacketHeader || packet.data[i] == PacketEscape) {
             sendByte(PacketEscape);
         }
         sendByte(packet.data[i]);
@@ -80,34 +74,22 @@ void ofxBinaryCommunicator::processIncomingByte(uint8_t incomingByte) {
             if (incomingByte == PacketHeader) {
                 state = ReceiveState::ReceivingChecksum;
                 receivedChecksum = 0;
-                receivedLength = 0;
-            } else if (incomingByte == PacketEnd) {
-                notifyEndPacket();
             } else {
                 notifyError(ErrorType::BufferOverflow);
             }
             break;
 
         case ReceiveState::ReceivingChecksum:
-            receivedChecksum = (receivedChecksum << 8) | byte;
-            if (receivedLength == 1) {
-                state = ReceiveState::ReceivingTopicId;
-                topicId = 0;
-                receivedLength = 0;
-            } else {
-                receivedLength++;
-            }
+            receivedChecksum = byte;
+            state = ReceiveState::ReceivingTopicId;
+            topicId = 0;
             break;
 
         case ReceiveState::ReceivingTopicId:
-            topicId = (topicId << 8) | byte;
-            if (receivedLength == 1) {
-                state = ReceiveState::ReceivingLength;
-                packetLength = 0;
-                receivedLength = 0;
-            } else {
-                receivedLength++;
-            }
+            topicId = byte;
+            state = ReceiveState::ReceivingLength;
+            packetLength = 0;
+            receivedLength = 0;
             break;
 
         case ReceiveState::ReceivingLength:
@@ -176,15 +158,17 @@ void ofxBinaryCommunicator::sendByte(uint8_t byte) {
     #endif
 }
 
-// Calculate checksum for data integrity
-uint16_t ofxBinaryCommunicator::calculateChecksum(const uint8_t* data, size_t length) {
-    // TODO: Implement your checksum calculation here
-    // This is a placeholder implementation. Replace with your actual checksum algorithm.
-    uint16_t checksum = 0;
-    for (size_t i = 0; i < length; i++) {
-        checksum += data[i];
+// Calculate Fletcher's Checksum for data integrity
+uint8_t ofxBinaryCommunicator::calculateChecksum(const uint8_t* data, uint16_t length) {
+    uint8_t sum1 = 0xff;
+    uint8_t sum2 = 0xff;
+    
+    while (length--) {
+        sum1 += *data++;
+        sum2 += sum1;
     }
-    return checksum;
+    
+    return (sum2 << 8) | sum1;
 }
 
 // Notify methods for platform-specific callback/event handling
@@ -206,14 +190,4 @@ void ofxBinaryCommunicator::notifyError(ErrorType errorType) {
         onError(errorType);
     }
 #endif
-}
-
-void ofxBinaryCommunicator::notifyEndPacket() {
-    #ifdef OF_VERSION_MAJOR
-    ofNotifyEvent(onEndPacket);
-    #else
-    if (onEndPacket) {
-        onEndPacket();
-    }
-    #endif
 }

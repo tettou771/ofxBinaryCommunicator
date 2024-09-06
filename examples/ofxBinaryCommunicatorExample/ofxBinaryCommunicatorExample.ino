@@ -3,26 +3,26 @@
 #define ERROR_LED_PIN 13  // Arduinoのビルトインバイナリが分かる場合に変更してください
 
 struct SampleSensorData {
-    static const uint16_t topicId = 0; // Should not conflict to other
+    static const uint8_t topicId = 0; // Should not conflict to other
     int32_t timestamp;
     int sensorValue;
 };
 
 struct SampleMouseData {
-    static const uint16_t topicId = 1;
+    static const uint8_t topicId = 1;
     int32_t timestamp;
     int x;
     int y;
 };
 
 struct SampleKeyData {
-    static const uint16_t topicId = 2;
+    static const uint8_t topicId = 2;
     int32_t timestamp;
     char key;
 };
 
 struct SampleMessageData {
-    static const uint16_t topicId = 3;
+    static const uint8_t topicId = 3;
     char message[30];
 };
 
@@ -32,7 +32,17 @@ void onMessageReceived(const ofxBinaryPacket& packet) {
   switch (packet.topicId) {
     case SampleMouseData::topicId: {
       SampleMessageData msgData;
-      strcpy(msgData.message, "got mosue data");
+      strcpy(msgData.message, "got mouse data");
+      communicator.send(msgData);
+    } break;
+    case SampleKeyData::topicId: {
+      SampleMessageData msgData;
+      strcpy(msgData.message, "got key data");
+      communicator.send(msgData);
+    } break;
+    case SampleMessageData::topicId: {
+      SampleMessageData msgData;
+      strcpy(msgData.message, "got message data");
       communicator.send(msgData);
     } break;
   }

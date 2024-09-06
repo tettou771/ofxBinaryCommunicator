@@ -4,26 +4,26 @@
 #include "ofxBinaryCommunicator.h"
 
 struct SampleSensorData {
-    static const uint16_t topicId = 0; // Should not conflict to other
+    static const uint8_t topicId = 0; // Should not conflict to other
     int32_t timestamp;
     int sensorValue;
 };
 
 struct SampleMouseData {
-    static const uint16_t topicId = 1;
+    static const uint8_t topicId = 1;
     int32_t timestamp;
     int x;
     int y;
 };
 
 struct SampleKeyData {
-    static const uint16_t topicId = 2;
+    static const uint8_t topicId = 2;
     int32_t timestamp;
     char key;
 };
 
 struct SampleMessageData {
-    static const uint16_t topicId = 3;
+    static const uint8_t topicId = 3;
     char message[30];
 };
 
