@@ -57,8 +57,8 @@ void ofxBinaryCommunicator::sendPacket(const ofxBinaryPacket& packet) {
     sendByte(checksum >> 8);
     sendByte(checksum & 0xFF);
 
-    sendByte(topicId >> 8);
-    sendByte(topicId & 0xFF);
+    sendByte(packet.topicId >> 8);
+    sendByte(packet.topicId & 0xFF);
 
     sendByte(packet.length >> 8);
     sendByte(packet.length & 0xFF);

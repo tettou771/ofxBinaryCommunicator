@@ -55,6 +55,7 @@ void onEndPacket() {
 void setup() {
   pinMode(ERROR_LED_PIN, OUTPUT);
 
+  Serial.begin(115200);
   communicator.setup(Serial);
 
   communicator.setReceivedCallback(onMessageReceived);
