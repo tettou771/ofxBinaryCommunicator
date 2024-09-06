@@ -58,10 +58,6 @@ void onError(ofxBinaryCommunicator::ErrorType errorType) {
   }
 }
 
-void onEndPacket() {
-  // Do nothing for end packet
-}
-
 void setup() {
   pinMode(ERROR_LED_PIN, OUTPUT);
 
@@ -70,7 +66,6 @@ void setup() {
 
   communicator.setReceivedCallback(onMessageReceived);
   communicator.setErrorCallback(onError);
-  communicator.setEndPacketCallback(onEndPacket);
 }
 
 void loop() {
