@@ -68,12 +68,10 @@ void ofxBinaryCommunicator::sendPacket(const ofxBinaryPacket& packet) {
 }
 
 // Process each incoming byte
-void ofxBinaryCommunicator::processIncomingByte(uint8_t incomingByte) {
-    uint8_t byte = static_cast<uint8_t>(incomingByte);
-
+void ofxBinaryCommunicator::processIncomingByte(uint8_t byte) {
     switch (state) {
         case ReceiveState::WaitingForHeader:
-            if (incomingByte == PacketHeader) {
+            if (byte == PacketHeader) {
                 state = ReceiveState::ReceivingChecksum;
                 receivedChecksum = 0;
             } else {
