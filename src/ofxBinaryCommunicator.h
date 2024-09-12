@@ -89,6 +89,11 @@ public:
 #endif
     
     bool isInitialized() const { return initialized; }
+    void close() {
+#ifdef OF_VERSION_MAJOR
+        serial->close();
+#endif
+    }
 
     void sendPacket(const ofxBinaryPacket& packet);
     template<typename T>
@@ -97,13 +102,14 @@ public:
         sendPacket(packet);
     }
 
-private:
-
+    // serialを直接触りたい時が結構あるので、あえてpublicのまま
     #ifdef OF_VERSION_MAJOR
     ofSerial* serial = nullptr;
     #else
     Stream* serial;
 
+private:
+    
     // Arduino specific callback function pointers
     ReceivedCallback onReceived;
     ErrorCallback onError;
