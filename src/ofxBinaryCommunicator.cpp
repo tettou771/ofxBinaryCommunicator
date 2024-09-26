@@ -158,8 +158,9 @@ void ofxBinaryCommunicator::sendByte(uint8_t byte) {
     #endif
 }
 
-// Calculate Fletcher's Checksum for data integrity
 uint8_t ofxBinaryCommunicator::calculateChecksum(const uint8_t* data, uint16_t length) {
+    /*
+    // 16bit Fletcher's Checksum
     uint8_t sum1 = 0xff;
     uint8_t sum2 = 0xff;
     
@@ -169,6 +170,14 @@ uint8_t ofxBinaryCommunicator::calculateChecksum(const uint8_t* data, uint16_t l
     }
     
     return (sum2 << 8) | sum1;
+     */
+    
+    // 8bit checksum
+    uint8_t sum = 0xff;
+    while (length--) {
+        sum += *data++;
+    }
+    return sum;
 }
 
 // Notify methods for platform-specific callback/event handling
