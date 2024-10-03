@@ -2,7 +2,8 @@
 
 void ofApp::setup() {
     ofSetFrameRate(60);
-    communicator.setup("/dev/cu.usbmodem101", 115200);  // Adjust port name as needed
+    // communicator.setup("COM3", 115200);
+    communicator.setup("/dev/cu.usbmodem1101", 115200);  // Adjust port name as needed
 
     ofAddListener(communicator.onReceived, this, &ofApp::onMessageReceived);
     ofAddListener(communicator.onError, this, &ofApp::onError);
@@ -93,7 +94,52 @@ void ofApp::onMessageReceived(const ofxBinaryPacket& packet) {
                 ofLogNotice() << "Received Message Data";
                 ofLogNotice() << "  Message: " << msgData.message;
             }
-        }
+        } break;
+            
+            // OscLikeMessage is predefined struct.
+        case OscLikeMessage::topicId: {
+            OscLikeMessage msg;
+            if (packet.unpack(msg)) {
+                ofLogNotice() << "Received OscLikeMessage";
+                ofLogNotice() << "address: " << msg.getAddressString() << " typestr: " << msg.getTypestrString();
+                for (int i = 0; i < msg.getNumArgs(); ++i) {
+                    switch (msg.getArgType(i)) {
+                        case OscLikeMessage::OSCLIKE_TYPE_INT32:
+                            ofLogNotice() << "int32: " << msg.getArgAsInt32(i);
+                            break;
+                        case OscLikeMessage::OSCLIKE_TYPE_UINT32:
+                            ofLogNotice() << "uint32: " << msg.getArgAsUint32(i);
+                            break;
+                        case OscLikeMessage::OSCLIKE_TYPE_FLOAT:
+                            ofLogNotice() << "float: " << msg.getArgAsFloat(i);
+                            break;
+                        case OscLikeMessage::OSCLIKE_TYPE_BOOL:
+                            ofLogNotice() << "bool: " << (msg.getArgAsBool(i) ? "true" : "false");
+                            break;
+                        case OscLikeMessage::OSCLIKE_TYPE_CHAR:
+                            ofLogNotice() << "char: " << msg.getArgAsChar(i);
+                            break;
+                        case OscLikeMessage::OSCLIKE_TYPE_CHAR4:
+                        {
+                            // 4byte charactors
+                            char char4[4];
+                            msg.getArgAsChar4(i, char4);
+                            ofLogNotice() << "char4: " << char4;
+                        }
+                            break;
+                        case OscLikeMessage::OSCLIKE_TYPE_COLOR:
+                        {
+                            OscLikeMessage::Color color = msg.getArgAsColor(i);
+                            ofLogNotice() << "color: (" << color.r << ", " << color.g << ", " << color.b << ", " << color.a << ")";
+                        }
+                            break;
+                        case OscLikeMessage::OSCLIKE_TYPE_NONE:
+                            ofLogNotice() << "None";
+                            break;
+                    }
+                }
+            }
+        } break;
 
         default:
             ofLogNotice() << "Received unknown topic: " << packet.topicId;

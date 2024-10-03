@@ -1,30 +1,28 @@
 #include <ofxBinaryCommunicator.h>
 
-#define ERROR_LED_PIN 13  // Arduinoのビルトインバイナリが分かる場合に変更してください
+#define ERROR_LED_PIN 13
 
-struct SampleSensorData {
-    static const uint8_t topicId = 0; // Should not conflict to other
+//---- Common definision for Arduino and openFrameworks ----//
+TOPIC_STRUCT_MAKER(SampleSensorData, 0, // Should not conflict to other
     int32_t timestamp;
     int sensorValue;
-};
+)
 
-struct SampleMouseData {
-    static const uint8_t topicId = 1;
+TOPIC_STRUCT_MAKER(SampleMouseData, 1,
     int32_t timestamp;
     int x;
     int y;
-};
+)
 
-struct SampleKeyData {
-    static const uint8_t topicId = 2;
+TOPIC_STRUCT_MAKER(SampleKeyData, 2,
     int32_t timestamp;
     char key;
-};
+)
 
-struct SampleMessageData {
-    static const uint8_t topicId = 3;
+TOPIC_STRUCT_MAKER( SampleMessageData, 3,
     char message[30];
-};
+)
+//---- Common definision for Arduino and openFrameworks end ----//
 
 ofxBinaryCommunicator communicator;
 
@@ -78,6 +76,23 @@ void loop() {
     sensorData.timestamp = millis();
     sensorData.sensorValue = analogRead(A0);
     communicator.send(sensorData);
+
+    // predefined struct: OscLikeMessage (High overhead)
+    OscLikeMessage msg;
+    msg.setAddress("/sensor/value"); // Max 32 char
+    msg.addInt32Arg(millis());
+    msg.addFloatArg(analogRead(A0) / 1024.0);
+    msg.addCharArg('A'); // 1byte char data
+    msg.addChar4Arg("SENS"); // 4byte char data
+    OscLikeMessage::Color color;
+    color.r = 0xC0;
+    color.g = 0xFF;
+    color.b = 0xEE;
+    color.a = 0xFF;
+    msg.addColorArg(color);
+    msg.addBoolArg(true);
+    communicator.send(msg);
+
     lastSensorSend = millis();
   }
 }

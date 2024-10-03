@@ -3,29 +3,27 @@
 #include "ofMain.h"
 #include "ofxBinaryCommunicator.h"
 
-struct SampleSensorData {
-    static const uint8_t topicId = 0; // Should not conflict to other
+//---- Common definision for Arduino and openFrameworks ----//
+TOPIC_STRUCT_MAKER(SampleSensorData, 0, // Should not conflict to other
     int32_t timestamp;
     int sensorValue;
-};
+)
 
-struct SampleMouseData {
-    static const uint8_t topicId = 1;
+TOPIC_STRUCT_MAKER(SampleMouseData, 1,
     int32_t timestamp;
     int x;
     int y;
-};
+)
 
-struct SampleKeyData {
-    static const uint8_t topicId = 2;
+TOPIC_STRUCT_MAKER(SampleKeyData, 2,
     int32_t timestamp;
     char key;
-};
+)
 
-struct SampleMessageData {
-    static const uint8_t topicId = 3;
+TOPIC_STRUCT_MAKER( SampleMessageData, 3,
     char message[30];
-};
+)
+//---- Common definision for Arduino and openFrameworks end ----//
 
 class ofApp : public ofBaseApp {
 public:

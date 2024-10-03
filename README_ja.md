@@ -2,14 +2,17 @@
 
 ofxBinaryCommunicatorは、ArduinoとopenFrameworksの間で効率的なバイナリ通信を行うためのライブラリです。カスタム定義された構造体データをシリアル通信で送受信し、データの整合性を検証する機能を備えています。
 
+目的は、OSCやMQTTのようにいつかの型を含んだパッケージを送受信できるようにすることです。
+事前に定義した構造体のみを通信で使えるので、柔軟性は犠牲になっていますがオーバーヘッドは小さいです。
+マイコンで毎秒数百回のデータ送受信をする場合など、送信できるbyte数に制限がある場合にも適しています。
+
 ## 特徴
 
 - カスタム定義された構造体の直接送受信
-- Fletcherのチェックサムを使用したデータ整合性の検証
-- エラーハンドリング機能
 - ArduinoとopenFrameworksの両方に対応
-- トピックIDを使用した複数のデータ型のサポート
-- 信頼性の高いデータ転送のためのエスケープシーケンス処理
+- topicIdを使用した複数のデータ型のサポート
+- checksumを使用したデータ整合性の検証
+- エラーハンドリング機能
 
 ## インストール方法
 
@@ -28,18 +31,20 @@ ofxBinaryCommunicatorは、ArduinoとopenFrameworksの間で効率的なバイ�
 1. 送受信したいデータの構造体を定義します：
 
 ```cpp
-struct SampleSensorData {
-    static const uint8_t topicId = 0;
+// SampleSensorDataという構造体を定義
+// Arduino -> openFrameworks を想定
+TOPIC_STRUCT_MAKER(SampleSensorData, 0, 
     int32_t timestamp;
     int sensorValue;
-};
+)
 
-struct SampleMouseData {
-    static const uint8_t topicId = 1;
+// SampleMouseDataという構造体を定義
+// openFrameworks -> Arduino を想定
+TOPIC_STRUCT_MAKER(SampleMouseData, 1,
     int32_t timestamp;
     int x;
     int y;
-};
+)
 ```
 
 2. ofxBinaryCommunicatorのインスタンスを作成します：
@@ -48,7 +53,7 @@ struct SampleMouseData {
 ofxBinaryCommunicator communicator;
 ```
 
-3. コミュニケーターをセットアップします：
+3. communicatorをセットアップします：
 
 ```cpp
 // openFrameworks
@@ -74,6 +79,7 @@ communicator.send(data);
 ofAddListener(communicator.onReceived, this, &YourClass::onMessageReceived);
 
 void YourClass::onMessageReceived(const ofxBinaryPacket& packet) {
+	// topicIdはuint8_tなので、switch文を使うと高速に振り分けができます
     switch (packet.topicId) {
         case SampleSensorData::topicId: {
             SampleSensorData sensorData;
@@ -103,7 +109,7 @@ void onMessageReceived(const ofxBinaryPacket& packet) {
 }
 ```
 
-6. エラーハンドリングをセットアップします：
+6. エラーハンドリングをセットアップします(必要なら)：
 
 ```cpp
 // openFrameworks
@@ -131,11 +137,13 @@ void update() { // Arduinoの場合は void loop()
 
 ## サンプル
 
-リポジトリにはArduino用（`ofxBinaryCommunicatorExample.ino`）とopenFrameworks用（`ofApp.cpp`）のサンプルコードが含まれています。これらのサンプルは、コミュニケーターのセットアップ方法、様々な種類のデータの送信方法、受信メッセージの処理方法を示しています。
+リポジトリにはArduino用（`ofxBinaryCommunicatorExample.ino`）とopenFrameworks用（`ofApp.cpp`）のサンプルコードが含まれています。これらのサンプルは、セットアップ方法、様々な種類のデータの送信方法、受信メッセージの処理方法を示しています。
 
 ## カスタマイズ
 
-ライブラリをインクルードする前に`MAX_PACKET_SIZE`を定義することで、最大パケットサイズを調整できます：
+ライブラリをincludeする前に`MAX_PACKET_SIZE`を定義することで、最大パケットサイズを調整できます。
+
+送受信する構造体が大きい場合はサイズを大きく、使用メモリを削減したい場合は小さくしてください。
 
 ```cpp
 #define MAX_PACKET_SIZE 512

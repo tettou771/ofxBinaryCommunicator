@@ -143,3 +143,6 @@ private:
     uint16_t receivedLength;
     uint8_t receivedData[MAX_PACKET_SIZE];
 };
+
+#include "ofxBinaryCommunicatorTopics.h"
+#include "OscLikeMessage.h"

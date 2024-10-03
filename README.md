@@ -2,14 +2,17 @@
 
 ofxBinaryCommunicator is a library for efficient binary communication between Arduino and openFrameworks. It allows sending and receiving custom-defined struct data over serial communication with data integrity verification.
 
+The purpose is to be able to send and receive packages containing several types, like OSC or MQTT.
+Since only predefined structures can be used for communication, flexibility is sacrificed but the overhead is small.
+It is also suitable when there is a limit to the number of bytes that can be sent, such as when a microcontroller sends and receives data several hundred times per second.
+
 ## Features
 
-- Send and receive custom-defined structs directly
-- Data integrity verification using Fletcher's Checksum
-- Error handling capabilities
+- Direct sending and receiving of custom-defined structures
 - Compatible with both Arduino and openFrameworks
-- Support for multiple data types with topic IDs
-- Escape sequence handling for reliable data transmission
+- Support for multiple data types using topicId
+- Verification of data integrity using checksum
+- Error handling function
 
 ## Installation
 
@@ -28,18 +31,17 @@ ofxBinaryCommunicator is a library for efficient binary communication between Ar
 1. Define structs for the data you want to send and receive:
 
 ```cpp
-struct SampleSensorData {
-    static const uint8_t topicId = 0;
+// struct definitions
+TOPIC_STRUCT_MAKER(SampleSensorData, 0, 
     int32_t timestamp;
     int sensorValue;
-};
+)
 
-struct SampleMouseData {
-    static const uint8_t topicId = 1;
+TOPIC_STRUCT_MAKER(SampleMouseData, 1,
     int32_t timestamp;
     int x;
     int y;
-};
+)
 ```
 
 2. Create an instance of ofxBinaryCommunicator:
@@ -52,7 +54,7 @@ ofxBinaryCommunicator communicator;
 
 ```cpp
 // openFrameworks
-communicator.setup("/dev/ttyUSB0", 115200);
+communicator.setup("COM3", 115200); // Please set your COM port
 
 // Arduino
 communicator.setup(Serial);
@@ -135,7 +137,9 @@ The repository includes example code for both Arduino (`ofxBinaryCommunicatorExa
 
 ## Customization
 
-You can adjust the maximum packet size by defining `MAX_PACKET_SIZE` before including the library:
+You can adjust the maximum packet size by defining `MAX_PACKET_SIZE` before including the library.
+
+If the structure to be sent or received is large, set the size larger; if you want to reduce memory usage, set the size smaller.
 
 ```cpp
 #define MAX_PACKET_SIZE 512
