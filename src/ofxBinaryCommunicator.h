@@ -119,7 +119,7 @@ private:
     void processIncomingByte(uint8_t incomingByte);
     bool packetReceived();
     void sendByte(uint8_t byte);
-    uint8_t calculateChecksum(const uint8_t* data, uint16_t length);
+    uint16_t calculateChecksum(const uint8_t* data, uint16_t length);
 
     // Methods to notify callbacks/events (implementation differs between platforms)
     void notifyReceived(const ofxBinaryPacket& packet);
@@ -137,7 +137,7 @@ private:
     };
 
     ReceiveState state;
-    uint8_t receivedChecksum;
+    uint16_t receivedChecksum;
     uint8_t topicId;
     uint16_t packetLength;
     uint16_t receivedLength;

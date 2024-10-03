@@ -51,8 +51,11 @@ void ofxBinaryCommunicator::update() {
 void ofxBinaryCommunicator::sendPacket(const ofxBinaryPacket& packet) {
     sendByte(PacketHeader);
 
-    uint8_t checksum = calculateChecksum(packet.data, packet.length);
-    sendByte(checksum);
+    uint16_t checksum = calculateChecksum(packet.data, packet.length);
+    // 2 bytes
+    sendByte(checksum >> 8);
+    sendByte(checksum & 0xFF);
+
     sendByte(packet.topicId);
 
     // 2 bytes
@@ -74,15 +77,21 @@ void ofxBinaryCommunicator::processIncomingByte(uint8_t byte) {
             if (byte == PacketHeader) {
                 state = ReceiveState::ReceivingChecksum;
                 receivedChecksum = 0;
+                receivedLength = 0;
             } else {
                 notifyError(ErrorType::BufferOverflow);
             }
             break;
 
         case ReceiveState::ReceivingChecksum:
-            receivedChecksum = byte;
-            state = ReceiveState::ReceivingTopicId;
-            topicId = 0;
+            receivedChecksum = (receivedChecksum << 8) | byte;
+            if (receivedLength == 1) {
+                state = ReceiveState::ReceivingTopicId;
+                topicId = 0;
+                receivedLength = 0;
+            } else {
+                receivedLength++;
+            }
             break;
 
         case ReceiveState::ReceivingTopicId:
@@ -158,8 +167,7 @@ void ofxBinaryCommunicator::sendByte(uint8_t byte) {
     #endif
 }
 
-uint8_t ofxBinaryCommunicator::calculateChecksum(const uint8_t* data, uint16_t length) {
-    /*
+uint16_t ofxBinaryCommunicator::calculateChecksum(const uint8_t* data, uint16_t length) {
     // 16bit Fletcher's Checksum
     uint8_t sum1 = 0xff;
     uint8_t sum2 = 0xff;
@@ -170,14 +178,6 @@ uint8_t ofxBinaryCommunicator::calculateChecksum(const uint8_t* data, uint16_t l
     }
     
     return (sum2 << 8) | sum1;
-     */
-    
-    // 8bit checksum
-    uint8_t sum = 0xff;
-    while (length--) {
-        sum += *data++;
-    }
-    return sum;
 }
 
 // Notify methods for platform-specific callback/event handling

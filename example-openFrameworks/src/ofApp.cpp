@@ -124,7 +124,7 @@ void ofApp::onMessageReceived(const ofxBinaryPacket& packet) {
                             // 4byte charactors
                             char char4[4];
                             msg.getArgAsChar4(i, char4);
-                            ofLogNotice() << "char4: " << char4;
+                            ofLogNotice() << "char4: " << string(char4, 4);
                         }
                             break;
                         case OscLikeMessage::OSCLIKE_TYPE_COLOR:
