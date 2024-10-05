@@ -1,5 +1,7 @@
 #pragma once
 
+// This sample works with ofxBinaryCommunicatorExample-basic in Arduino sample
+
 #include "ofMain.h"
 #include "ofxBinaryCommunicator.h"
 
@@ -40,6 +42,6 @@ public:
 
 private:
     ofxBinaryCommunicator communicator;
-    std::vector<SampleSensorData> receivedSensorData;
-    std::string lastError;
+    vector<SampleSensorData> receivedSensorData;
+    string lastError;
 };

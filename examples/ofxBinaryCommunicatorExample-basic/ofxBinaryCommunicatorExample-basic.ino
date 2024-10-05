@@ -76,23 +76,6 @@ void loop() {
     sensorData.timestamp = millis();
     sensorData.sensorValue = analogRead(A0);
     communicator.send(sensorData);
-
-    // predefined struct: OscLikeMessage (High overhead)
-    OscLikeMessage msg;
-    msg.setAddress("/sensor/value"); // Max 32 char
-    msg.addInt32Arg(millis());
-    msg.addFloatArg(analogRead(A0) / 1024.0);
-    msg.addCharArg('A'); // 1byte char data
-    msg.addChar4Arg("SENS"); // 4byte char data
-    OscLikeMessage::Color color;
-    color.r = 0xC0;
-    color.g = 0xFF;
-    color.b = 0xEE;
-    color.a = 0xFF;
-    msg.addColorArg(color);
-    msg.addBoolArg(true);
-    communicator.send(msg);
-
     lastSensorSend = millis();
   }
 }

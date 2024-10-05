@@ -131,9 +131,33 @@ void update() { // or void loop() for Arduino
 }
 ```
 
-## Example
+## Examples
 
-The repository includes example code for both Arduino (`ofxBinaryCommunicatorExample.ino`) and openFrameworks (`ofApp.cpp`). These examples demonstrate how to set up the communicator, send various types of data, and handle received messages.
+The repository contains three types of samples. Sample code for Arduino (`ofxBinaryCommunicatorExample-xxx.ino`) and openFrameworks (`example-openFrameworks-xxx`) is included. These samples show how to set up, send various types of data, and handle received messages.
+
+After writing the corresponding source code on the Arduino side and building the source code on the openFrameworks side, communication will be possible.
+
+### basic
+
+This explains the basic usage.
+
+This is a sample of how to define a structure that corresponds to the content you want to communicate, serialize it, and communicate.
+
+### OscLikeMessage
+
+This is a method of sending and receiving data using a predefined structure called OscLikeMessage.
+
+Although it has a large overhead, it allows you to easily send and receive data in a manner similar to OSC.
+
+However, because the structure is fixed length, it cannot handle types such as string. You can include int32, float, Color (custom definition), etc. in the data.
+
+### DeviceInfoRequest
+
+When many devices are connected to a PC, it can be difficult to identify devices using only the COM port number.
+
+Therefore, it is useful to assign names and IDs to devices in advance and make requests, as this will allow you to identify which devices are connected.
+
+This sample is intended for such use.
 
 ## Customization
 

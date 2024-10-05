@@ -1,9 +1,18 @@
 #include "ofApp.h"
 
+// This sample works with ofxBinaryCommunicatorExample-OscLikeMessage in Arduino sample
+
+/*
+This is a sample that communicates between structures called OscLikeMessage.
+Like Osc, you can specify an address and send values ​​such as Int32 or float. However, there are some types, such as strings, that cannot be sent. This is because the OscLikeMessage structure is fixed length.
+As you can see from the definition of OscLikeMessage, it itself becomes a relatively large binary (an instance is 192 bytes), so in order to achieve efficient sending and receiving, it is recommended to define a small structure like in the basic example.
+*/
+
 void ofApp::setup() {
+    ofSetWindowTitle("example OscLikeMessage");
     ofSetFrameRate(60);
     // communicator.setup("COM3", 115200);
-    communicator.setup("/dev/cu.usbmodem1101", 115200);  // Adjust port name as needed
+    communicator.setup("/dev/cu.usbmodem101", 115200);  // Adjust port name as needed
 
     ofAddListener(communicator.onReceived, this, &ofApp::onMessageReceived);
     ofAddListener(communicator.onError, this, &ofApp::onError);
@@ -21,7 +30,7 @@ void ofApp::draw() {
     ofDrawBitmapString("Received Sensor Data:", 20, 20);
     for (size_t i = 0; i < receivedSensorData.size() && i < 10; ++i) {
         const auto& data = receivedSensorData[receivedSensorData.size() - 1 - i];
-        ofDrawBitmapString("Time: " + ofToString(data.timestamp) + ", Value: " + ofToString(data.sensorValue), 20, 40 + i * 20);
+        ofDrawBitmapString("Time: " + ofToString(data.first) + " Value: " + ofToString(data.second), 20, 40 + i * 20);
     }
 
     // Draw last error if any
@@ -36,66 +45,26 @@ void ofApp::draw() {
 }
 
 void ofApp::mouseMoved(int x, int y) {
-    SampleMouseData data;
-    data.timestamp = ofGetElapsedTimeMillis();
-    data.x = x;
-    data.y = y;
+    OscLikeMessage msg;
+    msg.setAddress("/input/mouse");
+    msg.addInt32Arg(x);
+    msg.addInt32Arg(y);
+    communicator.send(msg);
     
-    communicator.send(data);
-    
-    ofLogNotice() << "Sent mouse data - X: " << data.x << ", Y: " << data.y;
+    ofLogNotice() << "Sent mouse data - X: " << x << ", Y: " << y;
 }
 
 void ofApp::keyPressed(int key) {
-    SampleKeyData data;
-    data.timestamp = ofGetElapsedTimeMillis();
-    data.key = static_cast<char>(key);
+    OscLikeMessage msg;
+    msg.setAddress("/input/key");
+    msg.addCharArg(key);
+    communicator.send(msg);
     
-    communicator.send(data);
-    
-    ofLogNotice() << "Sent key data - Key: " << data.key;
+    ofLogNotice() << "Sent key data :" << key;
 }
 
 void ofApp::onMessageReceived(const ofxBinaryPacket& packet) {
     switch (packet.topicId) {
-        case SampleSensorData::topicId: {
-            SampleSensorData sensorData;
-            if (packet.unpack(sensorData)) {
-                receivedSensorData.push_back(sensorData);
-                if (receivedSensorData.size() > 100) {
-                    receivedSensorData.erase(receivedSensorData.begin());
-                }
-                ofLogNotice() << "Received sensor data - Time: " << sensorData.timestamp << ", Value: " << sensorData.sensorValue;
-            }
-            break;
-        }
-
-        case SampleMouseData::topicId: { // SampleMouseData (echo back)
-            SampleMouseData mouseData;
-            if (packet.unpack(mouseData)) {
-                ofLogNotice() << "Received mouse data (echo back)";
-                ofLogNotice() << "  Timestamp: " << mouseData.timestamp;
-                ofLogNotice() << "  XY: " << mouseData.x << " " << mouseData.y;
-            }
-        } break;
-
-        case SampleKeyData::topicId: { // SampleKeyData (echo back)
-            SampleKeyData keyData;
-            if (packet.unpack(keyData)) {
-                ofLogNotice() << "Received key data (echo back)";
-                ofLogNotice() << "  Timestamp: " << keyData.timestamp;
-                ofLogNotice() << "  Key: " << keyData.key;
-            }
-        } break;
-            
-        case SampleMessageData::topicId: {
-            SampleMessageData msgData;
-            if (packet.unpack(msgData)) {
-                ofLogNotice() << "Received Message Data";
-                ofLogNotice() << "  Message: " << msgData.message;
-            }
-        } break;
-            
             // OscLikeMessage is predefined struct.
         case OscLikeMessage::topicId: {
             OscLikeMessage msg;
@@ -136,6 +105,25 @@ void ofApp::onMessageReceived(const ofxBinaryPacket& packet) {
                         case OscLikeMessage::OSCLIKE_TYPE_NONE:
                             ofLogNotice() << "None";
                             break;
+                    }
+                }
+                
+                // If msg is sensor data, add to history
+                if (msg.getAddressString() == "/sensor/value") {
+                    pair<uint32_t, float> newData;
+                    
+                    // Check arg type
+                    if (msg.getArgType(0) == OscLikeMessage::OSCLIKE_TYPE_INT32) {
+                        newData.first = msg.getArgAsInt32(0); // get arg
+                    }
+                    if (msg.getArgType(1) == OscLikeMessage::OSCLIKE_TYPE_FLOAT) {
+                        newData.second = msg.getArgAsFloat(1);
+                    }
+                    receivedSensorData.push_back(newData);
+                    
+                    // history max is 30
+                    while (receivedSensorData.size() > 30) {
+                        receivedSensorData.erase(receivedSensorData.begin());
                     }
                 }
             }
