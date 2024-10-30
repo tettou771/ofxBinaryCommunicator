@@ -58,8 +58,28 @@ public:
         ChecksumMismatch,
         IncompletePacket,
         BufferOverflow,
-        UnexpectedHeader
+        UnexpectedHeader,
+        UnknownError
     };
+    
+#ifdef OF_VERSION_MAJOR
+    static string ErrorToString(ErrorType error) {
+        switch (error) {
+            case ErrorType::ChecksumMismatch:
+                return "ChecksumMismatch";
+            case ErrorType::IncompletePacket:
+                return "IncompletePacket";
+            case ErrorType::BufferOverflow:
+                return "BufferOverflow";
+            case ErrorType::UnexpectedHeader:
+                return "UnexpectedHeader";
+            case ErrorType::UnknownError:
+                return "UnknownError";
+            default:
+                throw std::invalid_argument("Invalid ErrorType");
+        }
+    }
+#endif
 
     ofxBinaryCommunicator();
     ~ofxBinaryCommunicator();

@@ -1,4 +1,5 @@
 #include "ofApp.h"
+#include "ofSerial.h"
 
 // This sample works with ofxBinaryCommunicatorExample-DeviceInfoRequest in Arduino sample
 
@@ -11,11 +12,29 @@ It is intended to be used to identify devices when multiple devices are connecte
 void ofApp::setup() {
     ofSetWindowTitle("example DeviceInfoRequest");
     ofSetFrameRate(60);
-    // communicator.setup("COM3", 115200);
-    communicator.setup("/dev/cu.usbmodem101", 115200);  // Adjust port name as needed
 
-    ofAddListener(communicator.onReceived, this, &ofApp::onMessageReceived);
-    ofAddListener(communicator.onError, this, &ofApp::onError);
+    vector<ofSerialDeviceInfo> deviceList = ofSerial().getDeviceList();
+    deviceFound = false;
+    targetDeviceName = "TestDevice";
+
+    for (auto& device : deviceList) {
+        communicator.setup(device.getDevicePath() , 115200);
+        ofAddListener(communicator.onReceived, this, &ofApp::onMessageReceived);
+        ofAddListener(communicator.onError, this, &ofApp::onError);
+
+        // Send a DeviceInfoRequest to each device
+        DeviceInfoRequest req;
+        communicator.send(req);
+
+        // Wait for a response (this is a simplified example, you might need to handle this asynchronously)
+        ofSleepMillis(1000); // Wait for a second to receive the response
+
+        // Check if the received device name matches the target
+        if (deviceFound) {
+            communicator.close();
+            break;
+        }
+    }
 }
 
 void ofApp::update() {
@@ -70,29 +89,13 @@ void ofApp::keyPressed(int key) {
 }
 
 void ofApp::onMessageReceived(const ofxBinaryPacket& packet) {
-    switch (packet.topicId) {
-        case DeviceInfoResponse::topicId: {
-            DeviceInfoResponse res;
-            if (packet.unpack(res)) {
-                stringstream ss;
-                ss << "  Name: " << ofToString(res.deviceName);
-                ss << ", ID: " + ofToString(res.deviceId);
-                ss << ", Ver: " + ofToString(res.version);
-                receivedHistory.push_back(ss.str());
-            }
-        } break;
-        
-        case SetDeviceIdResponse::topicId: {
-            SetDeviceIdResponse res;
-            if (packet.unpack(res)) {
-                string result = res.succeeded ? " succeeded." : " fault.";
-                receivedHistory.push_back("Device ID " + ofToString(res.deviceId) + result);
-            }
-        } break;
-
-        default:
-            ofLogNotice() << "  Received unknown topic: " << packet.topicId;
-            break;
+    // Assuming DeviceInfoResponse is a struct with a member `deviceName`
+    DeviceInfoResponse response;
+    if (packet.unpack(response)) {
+        if (strcmp(response.deviceName, targetDeviceName.c_str()) == 0) {
+            ofLogNotice() << "Found target device: " << response.deviceName;
+            deviceFound = true;
+        }
     }
 }
 

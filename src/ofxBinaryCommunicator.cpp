@@ -118,6 +118,10 @@ void ofxBinaryCommunicator::processIncomingByte(uint8_t byte) {
         case ReceiveState::ReceivingData:
             if (byte == PacketEscape) {
                 state = ReceiveState::ReceivingEscape;
+            } else if (byte == PacketHeader) {
+                // 未エスケープのPacketHeaderを受信した場合
+                notifyError(ErrorType::UnexpectedHeader);
+                state = ReceiveState::WaitingForHeader;
             } else {
                 receivedData[receivedLength++] = byte;
                 if (receivedLength == packetLength) {
@@ -131,15 +135,21 @@ void ofxBinaryCommunicator::processIncomingByte(uint8_t byte) {
             break;
 
         case ReceiveState::ReceivingEscape:
-            receivedData[receivedLength++] = byte;
-            if (receivedLength == packetLength) {
-                packetReceived();
-                state = ReceiveState::WaitingForHeader;
-            } else if (receivedLength > packetLength) {
-                notifyError(ErrorType::BufferOverflow);
-                state = ReceiveState::WaitingForHeader;
+            if (byte == PacketHeader || byte == PacketEscape) {
+                receivedData[receivedLength++] = byte;
+                if (receivedLength == packetLength) {
+                    packetReceived();
+                    state = ReceiveState::WaitingForHeader;
+                } else if (receivedLength > packetLength) {
+                    notifyError(ErrorType::BufferOverflow);
+                    state = ReceiveState::WaitingForHeader;
+                } else {
+                    state = ReceiveState::ReceivingData;
+                }
             } else {
-                state = ReceiveState::ReceivingData;
+                // 不正なエスケープシーケンス
+                notifyError(ErrorType::UnknownError);
+                state = ReceiveState::WaitingForHeader;
             }
             break;
     }
