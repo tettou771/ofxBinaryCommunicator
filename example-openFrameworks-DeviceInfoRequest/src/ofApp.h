@@ -21,7 +21,6 @@ private:
     ofxBinaryCommunicator communicator;
     vector<string> receivedHistory;
     string lastError;
-    bool deviceFound;
     
     // Search for a device with this name
     string targetDeviceName;

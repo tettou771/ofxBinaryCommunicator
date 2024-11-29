@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#if !defined(OF_VERSION_MAJOR) && !defined(ARDUINO)
+#if !defined(ARDUINO)
     #include "ofMain.h"
 #endif
 
@@ -80,20 +80,20 @@ public:
         }
     }
 #endif
-
+    
     ofxBinaryCommunicator();
     ~ofxBinaryCommunicator();
-
+    
     // Setup method to initialize the communicator
-    #ifdef OF_VERSION_MAJOR
+#ifdef OF_VERSION_MAJOR
     void setup(const string& port, int baudRate);
-    #else
+#else
     void setup(HardwareSerial& serialDevice, int baudRate);
     void setup(Stream& serialDevice);
-    #endif
-
+#endif
+    
     void update();
-
+    
 #ifdef OF_VERSION_MAJOR
     // callback for openFrameworks
     ofEvent<const ofxBinaryPacket> onReceived;
@@ -102,7 +102,7 @@ public:
     // callback for Arduino
     typedef void (*ReceivedCallback)(const ofxBinaryPacket& packet);
     typedef void (*ErrorCallback)(ErrorType errorType);
-
+    
     // Arduino specific methods to set callbacks
     void setReceivedCallback(ReceivedCallback callback) { onReceived = callback; }
     void setErrorCallback(ErrorCallback callback) { onError = callback; }
@@ -114,39 +114,39 @@ public:
         serial->close();
 #endif
     }
-
+    
     void sendPacket(const ofxBinaryPacket& packet);
     template<typename T>
     void send(const T& data, decltype(T::topicId)* = 0) {
         ofxBinaryPacket packet(data);
         sendPacket(packet);
     }
-
+    
     // serialを直接触りたい時が結構あるので、あえてpublicのまま
-    #ifdef OF_VERSION_MAJOR
+#ifdef OF_VERSION_MAJOR
     ofSerial* serial = nullptr;
-    #else
+#else
     Stream* serial;
-
+    
 private:
     
     // Arduino specific callback function pointers
     ReceivedCallback onReceived;
     ErrorCallback onError;
-    #endif
+#endif
     
     // Private methods to handle different aspects of communication
     void processIncomingByte(uint8_t incomingByte);
     bool packetReceived();
     void sendByte(uint8_t byte);
     uint16_t calculateChecksum(const uint8_t* data, uint16_t length);
-
+    
     // Methods to notify callbacks/events (implementation differs between platforms)
     void notifyReceived(const ofxBinaryPacket& packet);
     void notifyError(ErrorType errorType);
     
     bool initialized;
-
+    
     enum class ReceiveState {
         WaitingForHeader,
         ReceivingChecksum,
@@ -155,7 +155,7 @@ private:
         ReceivingData,
         ReceivingEscape
     };
-
+    
     ReceiveState state;
     uint16_t receivedChecksum;
     uint8_t topicId;
@@ -166,3 +166,4 @@ private:
 
 #include "ofxBinaryCommunicatorTopics.h"
 #include "OscLikeMessage.h"
+#include "ofxBinaryCommunicatorTool.h"

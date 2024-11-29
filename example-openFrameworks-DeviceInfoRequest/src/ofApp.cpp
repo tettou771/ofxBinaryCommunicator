@@ -13,27 +13,15 @@ void ofApp::setup() {
     ofSetWindowTitle("example DeviceInfoRequest");
     ofSetFrameRate(60);
 
-    vector<ofSerialDeviceInfo> deviceList = ofSerial().getDeviceList();
-    deviceFound = false;
-    targetDeviceName = "TestDevice";
-
-    for (auto& device : deviceList) {
-        communicator.setup(device.getDevicePath() , 115200);
-        ofAddListener(communicator.onReceived, this, &ofApp::onMessageReceived);
-        ofAddListener(communicator.onError, this, &ofApp::onError);
-
-        // Send a DeviceInfoRequest to each device
-        DeviceInfoRequest req;
-        communicator.send(req);
-
-        // Wait for a response (this is a simplified example, you might need to handle this asynchronously)
-        ofSleepMillis(1000); // Wait for a second to receive the response
-
-        // Check if the received device name matches the target
-        if (deviceFound) {
-            communicator.close();
-            break;
-        }
+    int baudRate = 115200;
+    string targetDeviceName = "TestDevice";
+    string port = ofxBinaryCommunicatorTool::findDeviceByDeviceInfo(baudRate, targetDeviceName);
+    if (port.empty()) {
+        ofLogError() << "Device \"" << targetDeviceName << "\" is not founded.";
+    }
+    else {
+        ofLog() << "Device \"" << targetDeviceName << "\" founded. PORT: " << port;
+        communicator.setup(port, baudRate);
     }
 }
 
@@ -90,11 +78,10 @@ void ofApp::keyPressed(int key) {
 
 void ofApp::onMessageReceived(const ofxBinaryPacket& packet) {
     // Assuming DeviceInfoResponse is a struct with a member `deviceName`
-    DeviceInfoResponse response;
-    if (packet.unpack(response)) {
-        if (strcmp(response.deviceName, targetDeviceName.c_str()) == 0) {
-            ofLogNotice() << "Found target device: " << response.deviceName;
-            deviceFound = true;
+    DeviceInfoResponse res;
+    if (packet.unpack(res)) {
+        if (strcmp(res.deviceName, targetDeviceName.c_str()) == 0) {
+            ofLogNotice() << "DeviceInfo: " << res.deviceName << " ID: " << res.deviceId;
         }
     }
 }
