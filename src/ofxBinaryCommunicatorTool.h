@@ -42,6 +42,8 @@ public:
                 if (deviceFounded) break;
             }
             
+            com.close();
+            
             // Check if the received device name matches the target
             if (deviceFounded) {
                 port = device.getDevicePath();
