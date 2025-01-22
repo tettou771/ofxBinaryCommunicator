@@ -1,6 +1,25 @@
 #pragma once
 #include "ofxBinaryCommunicatorTopicStructMaker.h"
 
+
+// oF only methods
+#ifdef OF_VERSION_MAJOR
+#define OF_VERSION_MAJOR_METHODS \
+        void setAddress(const string& addr){ \
+            strncpy(address, addr.c_str(), ADDRESS_SIZE); \
+            address[ADDRESS_SIZE - 1] = '\0'; \
+        } \
+        string getAddressString() const { \
+            return string(address); \
+        } \
+        string getTypestrString() const { \
+            return string(typestr); \
+        }
+#else
+#define OF_VERSION_MAJOR_METHODS
+#endif
+
+
 TOPIC_STRUCT_MAKER(OscLikeMessage, 250,
     static const int MAX_ARGS = 32;      // Maximum number of arguments
     static const int ADDRESS_SIZE = 32;  // Size of the address string
@@ -279,14 +298,6 @@ TOPIC_STRUCT_MAKER(OscLikeMessage, 250,
         address[ADDRESS_SIZE - 1] = '\0'; // Ensure null-termination
     }
 
-#ifdef OF_VERSION_MAJOR
-    // Sets the address using a string
-    void setAddress(const string& addr){
-        strncpy(address, addr.c_str(), ADDRESS_SIZE);
-        address[ADDRESS_SIZE - 1] = '\0'; // Ensure null-termination
-    }
-#endif
-
     // Retrieves the address
     const char* getAddress() const {
         return address;
@@ -296,14 +307,5 @@ TOPIC_STRUCT_MAKER(OscLikeMessage, 250,
         return typestr;
     }
 
-#ifdef OF_VERSION_MAJOR
-    string getAddressString() const {
-        return string(address);
-    }
-
-    string getTypestrString() const {
-        return string(typestr);
-    }
-#endif
-
+    OF_VERSION_MAJOR_METHODS
 )
