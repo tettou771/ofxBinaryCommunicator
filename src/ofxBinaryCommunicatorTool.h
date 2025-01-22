@@ -21,8 +21,8 @@ public:
                 if (packet.topicId == DeviceInfoResponse::topicId) {
                     DeviceInfoResponse res;
                     if (packet.unpack(res)) {
-                        // デバイス名の先頭一致を確認
-                        if (strncmp(res.deviceName, deviceName.c_str(), deviceName.size()) == 0) {
+                        // デバイス名の一致を確認
+                        if (strcmp(res.deviceName, deviceName.c_str()) == 0) {
                             // deviceId指定が -1 なら、名前だけで合致判定
                             if (deviceId == -1) deviceFounded = true;
                             
@@ -35,14 +35,17 @@ public:
             
             // Send a DeviceInfoRequest
             // Wait for a response (this is a simplified example, you might need to handle this asynchronously)
-            for (int count = 0; count < 5; ++count) {
+            
+            float startTime = ofGetElapsedTimef();
+            float timeout = 0.5; // sec
+            while (ofGetElapsedTimef() - startTime < 0.5) {
                 com.send(DeviceInfoRequest());
                 ofSleepMillis(100);
                 com.update();
                 if (deviceFounded) break;
             }
             
-            com.close();
+            // com.close();
             
             // Check if the received device name matches the target
             if (deviceFounded) {
