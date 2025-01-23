@@ -2,7 +2,7 @@
 
 // Constructor
 ofxBinaryCommunicator::ofxBinaryCommunicator() : serial(nullptr) {
-    // Initialize other members if needed
+    state = ReceiveState::WaitingForHeader;
 }
 
 // Destructor
