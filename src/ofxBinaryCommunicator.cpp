@@ -79,7 +79,7 @@ void ofxBinaryCommunicator::processIncomingByte(uint8_t byte) {
                 receivedChecksum = 0;
                 receivedLength = 0;
             } else {
-                notifyError(ErrorType::BufferOverflow);
+                // 無視してゴミbyteを捨てる
             }
             break;
 
@@ -120,8 +120,13 @@ void ofxBinaryCommunicator::processIncomingByte(uint8_t byte) {
                 state = ReceiveState::ReceivingEscape;
             } else if (byte == PacketHeader) {
                 // 未エスケープのPacketHeaderを受信した場合
+                // 今読んでいたパケットは不完全で捨てる(エラーとして扱うなら notifyError も呼ぶ)
                 notifyError(ErrorType::UnexpectedHeader);
-                state = ReceiveState::WaitingForHeader;
+
+                // 新しいパケットの先頭(ヘッダ)が来たとみなして、最初から受信やり直し
+                state = ReceiveState::ReceivingChecksum;
+                receivedChecksum = 0;
+                receivedLength   = 0;
             } else {
                 receivedData[receivedLength++] = byte;
                 if (receivedLength == packetLength) {
