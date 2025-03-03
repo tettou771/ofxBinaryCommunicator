@@ -38,7 +38,7 @@ public:
             
             float startTime = ofGetElapsedTimef();
             float timeout = 0.5; // sec
-            while (ofGetElapsedTimef() - startTime < 0.5) {
+            while (ofGetElapsedTimef() - startTime < timeout) {
                 com.send(DeviceInfoRequest());
                 ofSleepMillis(100);
                 com.update();
